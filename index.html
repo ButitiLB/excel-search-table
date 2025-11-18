@@ -9,11 +9,20 @@
 
 <div class="container">
 
-    <h2>ობიექტების მონაცემთა ბაზა</h2>
+    <div class="top-bar">
+        <h2>ობიექტების მონაცემთა ბაზა</h2>
+
+        <div class="buttons">
+            <label id="importLabel">
+                CSV Import
+                <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
+            </label>
+
+            <button id="darkBtn" onclick="toggleDarkMode()">Dark Mode</button>
+        </div>
+    </div>
 
     <input type="text" id="searchInput" placeholder="მოძებნა..." onkeyup="searchTable()">
-
-    <button id="addRowBtn" onclick="addRow()">+ რიგის დამატება</button>
 
     <table id="dataTable">
         <thead>
@@ -22,15 +31,17 @@
                 <th>მისამართი</th>
                 <th>ვერსია</th>
                 <th>Anydesk</th>
+                <th>წაშლა</th>
             </tr>
         </thead>
 
-        <tbody contenteditable="true">
+        <tbody contenteditable="true" oninput="autoAddRow(event)">
             <tr>
                 <td>ობიექტი 1</td>
                 <td>თბილისი, ვაჟა-ფშაველას 10</td>
                 <td>9.2.8</td>
                 <td>123 456 789</td>
+                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
             </tr>
 
             <tr>
@@ -38,6 +49,13 @@
                 <td>ბათუმი, ჭავჭავაძის 34</td>
                 <td>9.1.8</td>
                 <td>891 223 112</td>
+                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
+            </tr>
+
+            <!-- ALWAYS keep last row empty (auto new row) -->
+            <tr>
+                <td></td><td></td><td></td><td></td>
+                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
             </tr>
         </tbody>
     </table>
