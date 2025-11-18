@@ -2,72 +2,485 @@
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>Object Database</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>რესტორნების მონაცემთა ბაზა</title>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
+    <div id="root"></div>
 
-<div class="container">
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-    <div class="top-bar">
-        <h2>ობიექტების მონაცემთა ბაზა</h2>
+        // Lucide Icons as React components
+        const Search = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+        );
 
-        <div class="buttons">
+        const Download = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+        );
 
-            <label id="importLabel">
-                CSV Import
-                <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
-            </label>
+        const Upload = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+        );
 
-            <!-- DARK MODE ICON BUTTON -->
-            <button id="darkBtn" onclick="toggleDarkMode()">
-                <span id="darkIcon">🌙 Dark</span>
-            </button>
+        const Plus = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        );
 
-        </div>
-    </div>
+        const Trash2 = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+            </svg>
+        );
 
-    <input type="text" id="searchInput" placeholder="მოძებნა..." onkeyup="searchTable()">
+        const Edit2 = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+            </svg>
+        );
 
-    <table id="dataTable">
-        <thead>
-            <tr>
-                <th class="col-name">დასახელება</th>
-                <th class="col-addr">მისამართი</th>
-                <th class="col-ver">ვერსია</th>
-                <th class="col-any">Anydesk</th>
-                <th class="col-del">წაშლა</th>
-            </tr>
-        </thead>
+        const Save = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+        );
 
-        <tbody contenteditable="true" oninput="autoAddRow(event)">
-            <tr>
-                <td>ობიექტი 1</td>
-                <td>თბილისი, ვაჟა-ფშაველას 10</td>
-                <td>9.2.8</td>
-                <td>123 456 789</td>
-                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
-            </tr>
+        const Eye = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+        );
 
-            <tr>
-                <td>ობიექტი 2</td>
-                <td>ბათუმი, ჭავჭავაძის 34</td>
-                <td>9.1.8</td>
-                <td>891 223 112</td>
-                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
-            </tr>
+        const EyeOff = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+        );
 
-            <!-- ALWAYS KEEP ONE EMPTY LAST ROW -->
-            <tr>
-                <td></td><td></td><td></td><td></td>
-                <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
-            </tr>
-        </tbody>
-    </table>
+        function RestaurantDatabase() {
+            const [restaurants, setRestaurants] = useState([]);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [editingId, setEditingId] = useState(null);
+            const [showPasswords, setShowPasswords] = useState({});
+            const [newRestaurant, setNewRestaurant] = useState({
+                name: '',
+                address: '',
+                version: '',
+                anydesk: '',
+                user: '',
+                password: ''
+            });
 
-</div>
+            useEffect(() => {
+                loadData();
+            }, []);
 
-<script src="script.js"></script>
+            const loadData = () => {
+                try {
+                    const saved = localStorage.getItem('restaurants-data');
+                    if (saved) {
+                        setRestaurants(JSON.parse(saved));
+                    }
+                } catch (error) {
+                    console.log('No existing data found');
+                }
+            };
 
+            const saveData = (data) => {
+                try {
+                    localStorage.setItem('restaurants-data', JSON.stringify(data));
+                } catch (error) {
+                    console.error('Error saving data:', error);
+                    alert('შეცდომა მონაცემების შენახვისას');
+                }
+            };
+
+            const filteredRestaurants = restaurants.filter(restaurant =>
+                Object.values(restaurant).some(value =>
+                    value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+                )
+            );
+
+            const addRestaurant = () => {
+                if (!newRestaurant.name.trim()) {
+                    alert('გთხოვთ შეიყვანოთ რესტორნის დასახელება');
+                    return;
+                }
+
+                const updated = [...restaurants, { ...newRestaurant, id: Date.now() }];
+                setRestaurants(updated);
+                saveData(updated);
+                setNewRestaurant({
+                    name: '',
+                    address: '',
+                    version: '',
+                    anydesk: '',
+                    user: '',
+                    password: ''
+                });
+            };
+
+            const deleteRestaurant = (id) => {
+                if (confirm('დარწმუნებული ხართ რომ გსურთ წაშლა?')) {
+                    const updated = restaurants.filter(r => r.id !== id);
+                    setRestaurants(updated);
+                    saveData(updated);
+                }
+            };
+
+            const startEdit = (restaurant) => {
+                setEditingId(restaurant.id);
+            };
+
+            const saveEdit = (id, field, value) => {
+                const updated = restaurants.map(r =>
+                    r.id === id ? { ...r, [field]: value } : r
+                );
+                setRestaurants(updated);
+                saveData(updated);
+            };
+
+            const togglePasswordVisibility = (id) => {
+                setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+            };
+
+            const exportToCSV = () => {
+                const headers = ['დასახელება', 'მისამართი', 'ვერსია', 'AnyDesk', 'მომხმარებელი', 'პაროლი'];
+                const csvContent = [
+                    headers.join(','),
+                    ...restaurants.map(r => 
+                        [r.name, r.address, r.version, r.anydesk, r.user, r.password]
+                            .map(field => `"${field}"`)
+                            .join(',')
+                    )
+                ].join('\n');
+
+                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `restaurants_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+            };
+
+            const importFromCSV = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n').slice(1);
+                    const imported = lines
+                        .filter(line => line.trim())
+                        .map((line, index) => {
+                            const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+                            const cleaned = values.map(v => v.replace(/^"|"$/g, '').trim());
+                            return {
+                                id: Date.now() + index,
+                                name: cleaned[0] || '',
+                                address: cleaned[1] || '',
+                                version: cleaned[2] || '',
+                                anydesk: cleaned[3] || '',
+                                user: cleaned[4] || '',
+                                password: cleaned[5] || ''
+                            };
+                        });
+
+                    const updated = [...restaurants, ...imported];
+                    setRestaurants(updated);
+                    saveData(updated);
+                    alert(`წარმატებით დაიმპორტირდა ${imported.length} ჩანაწერი`);
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                                რესტორნების მონაცემთა ბაზა
+                            </h1>
+                            <p className="text-slate-600">ლაივ ძებნა და მართვა</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <div className="flex gap-4 mb-4 flex-wrap">
+                                <div className="flex-1 min-w-64">
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-3 text-slate-400">
+                                            <Search />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="ძებნა..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={exportToCSV}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                                >
+                                    <Download />
+                                    ექსპორტი CSV
+                                </button>
+                                <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                                    <Upload />
+                                    იმპორტი CSV
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={importFromCSV}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                            <div className="text-sm text-slate-600">
+                                სულ: {restaurants.length} | ნაპოვნი: {filteredRestaurants.length}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h2 className="text-xl font-semibold text-slate-800 mb-4">ახალი რესტორნის დამატება</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                <input
+                                    type="text"
+                                    placeholder="დასახელება"
+                                    value={newRestaurant.name}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="მისამართი"
+                                    value={newRestaurant.address}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, address: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="ვერსია"
+                                    value={newRestaurant.version}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, version: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="AnyDesk"
+                                    value={newRestaurant.anydesk}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, anydesk: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="მომხმარებელი"
+                                    value={newRestaurant.user}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, user: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="პაროლი"
+                                    value={newRestaurant.password}
+                                    onChange={(e) => setNewRestaurant({ ...newRestaurant, password: e.target.value })}
+                                    className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <button
+                                onClick={addRestaurant}
+                                className="mt-4 flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            >
+                                <Plus />
+                                დამატება
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-100">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">დასახელება</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მისამართი</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">ვერსია</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">AnyDesk</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მომხმარებელი</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">პაროლი</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700">მოქმედებები</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {filteredRestaurants.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-4 py-8 text-center text-slate-500">
+                                                    მონაცემები არ მოიძებნა
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredRestaurants.map((restaurant) => (
+                                                <tr key={restaurant.id} className="hover:bg-slate-50 transition">
+                                                    <td className="px-4 py-3">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.name}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'name', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                                autoFocus
+                                                            />
+                                                        ) : (
+                                                            <span className="font-medium text-slate-800">{restaurant.name}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.address}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'address', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            restaurant.address
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.version}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'version', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                                                {restaurant.version}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600 font-mono text-sm">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.anydesk}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'anydesk', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            restaurant.anydesk
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.user}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'user', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            restaurant.user
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            {editingId === restaurant.id ? (
+                                                                <input
+                                                                    type="text"
+                                                                    defaultValue={restaurant.password}
+                                                                    onBlur={(e) => saveEdit(restaurant.id, 'password', e.target.value)}
+                                                                    className="w-full px-2 py-1 border rounded"
+                                                                />
+                                                            ) : (
+                                                                <>
+                                                                    <span className="font-mono text-sm text-slate-600">
+                                                                        {showPasswords[restaurant.id] ? restaurant.password : '••••••••'}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => togglePasswordVisibility(restaurant.id)}
+                                                                        className="text-slate-400 hover:text-slate-600"
+                                                                    >
+                                                                        {showPasswords[restaurant.id] ? <EyeOff /> : <Eye />}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex justify-center gap-2">
+                                                            {editingId === restaurant.id ? (
+                                                                <button
+                                                                    onClick={() => setEditingId(null)}
+                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                                                    title="შენახვა"
+                                                                >
+                                                                    <Save />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => startEdit(restaurant)}
+                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                                    title="რედაქტირება"
+                                                                >
+                                                                    <Edit2 />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => deleteRestaurant(restaurant.id)}
+                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                                                title="წაშლა"
+                                                            >
+                                                                <Trash2 />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-blue-900 mb-2">GitHub-თან სინქრონიზაცია</h3>
+                            <p className="text-blue-800 mb-3">
+                                მონაცემები ავტომატურად ინახება ბრაუზერში. GitHub-ზე ატვირთვისთვის:
+                            </p>
+                            <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                                <li>დააჭირეთ "ექსპორტი CSV" ღილაკს</li>
+                                <li>ატვირთეთ ფაილი თქვენს GitHub რეპოზიტორიაში</li>
+                                <li>გააზიარეთ რეპოზიტორიის ბმული თქვენს გუნდთან</li>
+                                <li>გუნდის წევრებს შეუძლიათ "იმპორტი CSV" ბმულით მონაცემების დატვირთვა</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<RestaurantDatabase />, document.getElementById('root'));
+    </script>
 </body>
 </html>
