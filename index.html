@@ -519,104 +519,42 @@
                                                                 defaultValue={restaurant.name}
                                                                 onBlur={(e) => saveEdit(restaurant.id, 'name', e.target.value)}
                                                                 className="w-full px-2 py-1 border rounded"
+                                                                autoFocus
                                                             />
                                                         ) : (
-                                                            restaurant.anydesk
+                                                            <span className="font-medium text-slate-800">{restaurant.name}</span>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-slate-600">
                                                         {editingId === restaurant.id ? (
                                                             <input
                                                                 type="text"
-                                                                defaultValue={restaurant.user}
-                                                                onBlur={(e) => saveEdit(restaurant.id, 'user', e.target.value)}
+                                                                defaultValue={restaurant.address}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'address', e.target.value)}
                                                                 className="w-full px-2 py-1 border rounded"
                                                             />
                                                         ) : (
-                                                            restaurant.user
+                                                            restaurant.address
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            {editingId === restaurant.id ? (
-                                                                <input
-                                                                    type="text"
-                                                                    defaultValue={restaurant.password}
-                                                                    onBlur={(e) => saveEdit(restaurant.id, 'password', e.target.value)}
-                                                                    className="w-full px-2 py-1 border rounded"
-                                                                />
-                                                            ) : (
-                                                                <>
-                                                                    <span className="font-mono text-sm text-slate-600">
-                                                                        {showPasswords[restaurant.id] ? restaurant.password : '••••••••'}
-                                                                    </span>
-                                                                    <button
-                                                                        onClick={() => togglePasswordVisibility(restaurant.id)}
-                                                                        className="text-slate-400 hover:text-slate-600"
-                                                                    >
-                                                                        {showPasswords[restaurant.id] ? <EyeOff /> : <Eye />}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.version}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'version', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                                                                {restaurant.version}
+                                                            </span>
+                                                        )}
                                                     </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="flex justify-center gap-2">
-                                                            {editingId === restaurant.id ? (
-                                                                <button
-                                                                    onClick={() => setEditingId(null)}
-                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                                                    title="შენახვა"
-                                                                >
-                                                                    <Save />
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => startEdit(restaurant)}
-                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                                                    title="რედაქტირება"
-                                                                >
-                                                                    <Edit2 />
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => deleteRestaurant(restaurant.id)}
-                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                                                title="წაშლა"
-                                                            >
-                                                                <Trash2 />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-6">
-                            <h3 className="text-lg font-semibold text-green-900 mb-2 flex items-center gap-2">
-                                <Github />
-                                GitHub სინქრონიზაცია აქტიურია!
-                            </h3>
-                            <p className="text-green-800 mb-2">
-                                მონაცემები ავტომატურად ინახება GitHub რეპოზიტორიაში: <strong>{githubConfig.owner}/{githubConfig.repo}</strong>
-                            </p>
-                            <ul className="list-disc list-inside space-y-1 text-sm text-green-800">
-                                <li>ყველა ცვლილება ავტომატურად იტვირთება GitHub-ზე</li>
-                                <li>გვერდი ავტომატურად ახლდება ყოველ 30 წამში</li>
-                                <li>ყველა გუნდის წევრს ხედავს იმავე მონაცემებს რეალურ დროში</li>
-                                <li>დააჭირეთ "განახლება" ღილაკს ხელით განსახლებლად</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        ReactDOM.render(<RestaurantDatabase />, document.getElementById('root'));
-    </script>
-</body>
-</html>2 py-1 border rounded"
+                                                    <td className="px-4 py-3 text-slate-600 font-mono text-sm">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.anydesk}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'anydesk', e.target.value)}
+                                                                className="w-full px-
