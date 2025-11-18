@@ -1,527 +1,428 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Download, Upload, Plus, Trash2, Edit2, Save, X, Eye, EyeOff, AlertCircle, RefreshCw } from 'lucide-react';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/+esm';
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>რესტორნების მონაცემთა ბაზა</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div id="app" class="p-8">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800 mb-2">რესტორნების მონაცემთა ბაზა</h1>
+                        <p class="text-slate-600">ლაივ ძებნა და მართვა • Supabase Database</p>
+                    </div>
+                    <button onclick="loadData()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">
+                        <span>🔄</span> განახლება
+                    </button>
+                </div>
+            </div>
 
-// Supabase Configuration
-const supabaseUrl = 'https://whhnxvvpngiquenwbgnl.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoaG54dnZwbmdpcXVlbndiZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NTkyNzQsImV4cCI6MjA3OTAzNTI3NH0.aAf6h1sTUgPGkdSuoIGO2aHkRifusdTWbHKzrbVdJYc';
-const supabase = createClient(supabaseUrl, supabaseKey);
+            <!-- Error Alert -->
+            <div id="errorAlert" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                <span class="text-red-600 text-xl">⚠️</span>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-red-900 mb-1">შეცდომა</h3>
+                    <p id="errorMessage" class="text-red-800 text-sm"></p>
+                </div>
+            </div>
 
-export default function RestaurantDatabase() {
-  const [restaurants, setRestaurants] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [showPasswords, setShowPasswords] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [newRestaurant, setNewRestaurant] = useState({
-    name: '',
-    address: '',
-    version: '',
-    anydesk: '',
-    user: '',
-    password: ''
-  });
+            <!-- Loading State -->
+            <div id="loadingState" class="bg-white rounded-xl shadow-lg p-12 text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-slate-600">მონაცემები იტვირთება...</p>
+            </div>
 
-  // Load data from Supabase on mount
-  useEffect(() => {
-    loadData();
-  }, []);
+            <!-- Main Content -->
+            <div id="mainContent" class="hidden">
+                <!-- Search and Actions -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div class="flex gap-4 mb-4 flex-wrap">
+                        <div class="flex-1 min-w-64">
+                            <div class="relative">
+                                <span class="absolute left-3 top-3 text-slate-400">🔍</span>
+                                <input type="text" id="searchInput" placeholder="ძებნა ყველა ველში..." 
+                                    class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                        <button onclick="exportToCSV()" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                            <span>📥</span> ექსპორტი CSV
+                        </button>
+                        <label class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                            <span>📤</span> იმპორტი CSV
+                            <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="importFromCSV(event)">
+                        </label>
+                    </div>
+                    <div class="text-sm text-slate-600">
+                        სულ: <span id="totalCount" class="font-semibold">0</span> | 
+                        ნაპოვნი: <span id="filteredCount" class="font-semibold">0</span>
+                    </div>
+                </div>
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data, error: fetchError } = await supabase
-        .from('restaurants')
-        .select('*')
-        .order('id', { ascending: true });
+                <!-- Add New Restaurant -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-4">➕ ახალი რესტორნის დამატება</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <input type="text" id="newName" placeholder="დასახელება *" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newAddress" placeholder="მისამართი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newVersion" placeholder="ვერსია" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newAnydesk" placeholder="AnyDesk" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newUser" placeholder="მომხმარებელი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newPassword" placeholder="პაროლი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <button onclick="addRestaurant()" class="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <span>➕</span> დამატება
+                    </button>
+                </div>
 
-      if (fetchError) throw fetchError;
-      setRestaurants(data || []);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setError('მონაცემების ჩატვირთვის შეცდომა: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+                <!-- Table -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">დასახელება</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">მისამართი</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">ვერსია</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">AnyDesk</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">მომხმარებელი</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">პაროლი</th>
+                                    <th class="px-4 py-3 text-center text-sm font-semibold text-slate-700">მოქმედებები</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-  const filteredRestaurants = restaurants.filter(restaurant =>
-    Object.values(restaurant).some(value =>
-      value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+                <!-- Info Footer -->
+                <div class="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-2">💡 ინფორმაცია</h3>
+                    <ul class="space-y-2 text-blue-800 text-sm">
+                        <li>✅ მონაცემები ავტომატურად ინახება Supabase ბაზაში</li>
+                        <li>🔄 რეალურ დროში სინქრონიზაცია ყველა მოწყობილობაზე</li>
+                        <li>📥 CSV იმპორტი/ექსპორტი ბექაპისთვის</li>
+                        <li>🔍 ლაივ ძებნა ყველა ველში</li>
+                        <li>✏️ სწრაფი რედაქტირება - დააჭირეთ ✏️ ღილაკს</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  const addRestaurant = async () => {
-    if (!newRestaurant.name.trim()) {
-      alert('გთხოვთ შეიყვანოთ რესტორნის დასახელება');
-      return;
-    }
+    <script>
+        // Supabase Configuration
+        const supabaseUrl = 'https://whhnxvvpngiquenwbgnl.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoaG54dnZwbmdpcXVlbndiZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NTkyNzQsImV4cCI6MjA3OTAzNTI3NH0.aAf6h1sTUgPGkdSuoIGO2aHkRifusdTWbHKzrbVdJYc';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    try {
-      const { data, error } = await supabase
-        .from('restaurants')
-        .insert([newRestaurant])
-        .select();
+        let restaurants = [];
+        let editingId = null;
+        let showPasswords = {};
 
-      if (error) throw error;
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
 
-      setRestaurants([...restaurants, ...data]);
-      setNewRestaurant({
-        name: '',
-        address: '',
-        version: '',
-        anydesk: '',
-        user: '',
-        password: ''
-      });
-      alert('✅ წარმატებით დაემატა');
-    } catch (error) {
-      console.error('Error adding restaurant:', error);
-      alert('❌ შეცდომა დამატებისას: ' + error.message);
-    }
-  };
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderTable(e.target.value);
+        });
 
-  const deleteRestaurant = async (id) => {
-    if (!confirm('დარწმუნებული ხართ რომ გსურთ წაშლა?')) return;
+        async function loadData() {
+            try {
+                document.getElementById('loadingState').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+                document.getElementById('errorAlert').classList.add('hidden');
 
-    try {
-      const { error } = await supabase
-        .from('restaurants')
-        .delete()
-        .eq('id', id);
+                const { data, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .order('id', { ascending: true });
 
-      if (error) throw error;
+                if (error) throw error;
 
-      setRestaurants(restaurants.filter(r => r.id !== id));
-      alert('✅ წარმატებით წაიშალა');
-    } catch (error) {
-      console.error('Error deleting restaurant:', error);
-      alert('❌ შეცდომა წაშლისას: ' + error.message);
-    }
-  };
+                restaurants = data || [];
+                renderTable();
 
-  const startEdit = (restaurant) => {
-    setEditingId(restaurant.id);
-    setEditValues({ ...restaurant });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValues({});
-  };
-
-  const saveEdit = async () => {
-    try {
-      const { id, created_at, ...updateData } = editValues;
-      
-      const { error } = await supabase
-        .from('restaurants')
-        .update(updateData)
-        .eq('id', editingId);
-
-      if (error) throw error;
-
-      setRestaurants(restaurants.map(r =>
-        r.id === editingId ? editValues : r
-      ));
-      setEditingId(null);
-      setEditValues({});
-      alert('✅ წარმატებით შეინახა');
-    } catch (error) {
-      console.error('Error saving edit:', error);
-      alert('❌ შეცდომა შენახვისას: ' + error.message);
-    }
-  };
-
-  const togglePasswordVisibility = (id) => {
-    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const exportToCSV = () => {
-    const headers = ['დასახელება', 'მისამართი', 'ვერსია', 'AnyDesk', 'მომხმარებელი', 'პაროლი'];
-    const csvContent = [
-      headers.join(','),
-      ...restaurants.map(r => 
-        [r.name, r.address, r.version, r.anydesk, r.user, r.password]
-          .map(field => `"${field || ''}"`)
-          .join(',')
-      )
-    ].join('\n');
-
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `restaurants_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  const importFromCSV = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const text = e.target.result;
-        const lines = text.split('\n').slice(1);
-        const imported = lines
-          .filter(line => line.trim())
-          .map((line) => {
-            const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-            const cleaned = values.map(v => v.replace(/^"|"$/g, '').trim());
-            return {
-              name: cleaned[0] || '',
-              address: cleaned[1] || '',
-              version: cleaned[2] || '',
-              anydesk: cleaned[3] || '',
-              user: cleaned[4] || '',
-              password: cleaned[5] || ''
-            };
-          })
-          .filter(item => item.name);
-
-        if (imported.length === 0) {
-          alert('❌ CSV ფაილი ცარიელია ან არასწორი ფორმატის');
-          return;
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError('მონაცემების ჩატვირთვის შეცდომა: ' + error.message);
+                document.getElementById('loadingState').classList.add('hidden');
+            }
         }
 
-        const { data, error } = await supabase
-          .from('restaurants')
-          .insert(imported)
-          .select();
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorAlert').classList.remove('hidden');
+        }
 
-        if (error) throw error;
+        function renderTable(searchQuery = '') {
+            const filtered = restaurants.filter(restaurant =>
+                Object.values(restaurant).some(value =>
+                    value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+                )
+            );
 
-        setRestaurants([...restaurants, ...data]);
-        alert(`✅ წარმატებით დაიმპორტირდა ${data.length} ჩანაწერი`);
-      } catch (error) {
-        console.error('Import error:', error);
-        alert('❌ შეცდომა იმპორტისას: ' + error.message);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
+            document.getElementById('totalCount').textContent = restaurants.length;
+            document.getElementById('filteredCount').textContent = filtered.length;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                რესტორნების მონაცემთა ბაზა
-              </h1>
-              <p className="text-slate-600">ლაივ ძებნა და მართვა • Supabase Database</p>
-            </div>
-            <button
-              onClick={loadData}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
-              title="განახლება"
-            >
-              <RefreshCw size={20} />
-              განახლება
-            </button>
-          </div>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-            <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-            <div className="flex-1">
-              <h3 className="font-semibold text-red-900 mb-1">შეცდომა</h3>
-              <p className="text-red-800 text-sm">{error}</p>
-              <button
-                onClick={loadData}
-                className="mt-2 text-sm text-red-700 underline hover:text-red-900"
-              >
-                თავიდან ცდა
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading ? (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-slate-600">მონაცემები იტვირთება...</p>
-          </div>
-        ) : (
-          <>
-            {/* Search and Actions */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <div className="flex gap-4 mb-4 flex-wrap">
-                <div className="flex-1 min-w-64">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 text-slate-400" size={20} />
-                    <input
-                      type="text"
-                      placeholder="ძებნა ყველა ველში..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={exportToCSV}
-                  disabled={restaurants.length === 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  <Download size={20} />
-                  ექსპორტი CSV
-                </button>
-                <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
-                  <Upload size={20} />
-                  იმპორტი CSV
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={importFromCSV}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-              <div className="text-sm text-slate-600">
-                სულ: <span className="font-semibold">{restaurants.length}</span> | ნაპოვნი: <span className="font-semibold">{filteredRestaurants.length}</span>
-              </div>
-            </div>
-
-            {/* Add New Restaurant */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-slate-800 mb-4">➕ ახალი რესტორნის დამატება</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="დასახელება *"
-                  value={newRestaurant.name}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, name: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="მისამართი"
-                  value={newRestaurant.address}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, address: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="ვერსია"
-                  value={newRestaurant.version}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, version: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="AnyDesk"
-                  value={newRestaurant.anydesk}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, anydesk: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="მომხმარებელი"
-                  value={newRestaurant.user}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, user: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="პაროლი"
-                  value={newRestaurant.password}
-                  onChange={(e) => setNewRestaurant({ ...newRestaurant, password: e.target.value })}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <button
-                onClick={addRestaurant}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                <Plus size={20} />
-                დამატება
-              </button>
-            </div>
-
-            {/* Table */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-100">
+            const tbody = document.getElementById('tableBody');
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">დასახელება</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მისამართი</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">ვერსია</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">AnyDesk</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მომხმარებელი</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">პაროლი</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700">მოქმედებები</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {filteredRestaurants.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-4 py-12 text-center text-slate-500">
-                          {searchQuery ? '🔍 მონაცემები არ მოიძებნა' : '📝 დაამატეთ პირველი რესტორანი'}
+                        <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+                            ${searchQuery ? '🔍 მონაცემები არ მოიძებნა' : '📝 დაამატეთ პირველი რესტორანი'}
                         </td>
-                      </tr>
-                    ) : (
-                      filteredRestaurants.map((restaurant) => (
-                        <tr key={restaurant.id} className="hover:bg-slate-50 transition">
-                          <td className="px-4 py-3">
-                            {editingId === restaurant.id ? (
-                              <input
-                                type="text"
-                                value={editValues.name}
-                                onChange={(e) => setEditValues({...editValues, name: e.target.value})}
-                                className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                                autoFocus
-                              />
-                            ) : (
-                              <span className="font-medium text-slate-800">{restaurant.name}</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {editingId === restaurant.id ? (
-                              <input
-                                type="text"
-                                value={editValues.address}
-                                onChange={(e) => setEditValues({...editValues, address: e.target.value})}
-                                className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            ) : (
-                              restaurant.address
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {editingId === restaurant.id ? (
-                              <input
-                                type="text"
-                                value={editValues.version}
-                                onChange={(e) => setEditValues({...editValues, version: e.target.value})}
-                                className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            ) : (
-                              <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                                {restaurant.version || '-'}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 font-mono text-sm">
-                            {editingId === restaurant.id ? (
-                              <input
-                                type="text"
-                                value={editValues.anydesk}
-                                onChange={(e) => setEditValues({...editValues, anydesk: e.target.value})}
-                                className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            ) : (
-                              restaurant.anydesk || '-'
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-slate-600">
-                            {editingId === restaurant.id ? (
-                              <input
-                                type="text"
-                                value={editValues.user}
-                                onChange={(e) => setEditValues({...editValues, user: e.target.value})}
-                                className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                              />
-                            ) : (
-                              restaurant.user || '-'
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              {editingId === restaurant.id ? (
-                                <input
-                                  type="text"
-                                  value={editValues.password}
-                                  onChange={(e) => setEditValues({...editValues, password: e.target.value})}
-                                  className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500"
-                                />
-                              ) : (
-                                <>
-                                  <span className="font-mono text-sm text-slate-600">
-                                    {showPasswords[restaurant.id] ? (restaurant.password || '-') : '••••••••'}
-                                  </span>
-                                  {restaurant.password && (
-                                    <button
-                                      onClick={() => togglePasswordVisibility(restaurant.id)}
-                                      className="text-slate-400 hover:text-slate-600 transition"
-                                    >
-                                      {showPasswords[restaurant.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                                    </button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-center gap-2">
-                              {editingId === restaurant.id ? (
-                                <>
-                                  <button
-                                    onClick={saveEdit}
-                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                                    title="შენახვა"
-                                  >
-                                    <Save size={18} />
-                                  </button>
-                                  <button
-                                    onClick={cancelEdit}
-                                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition"
-                                    title="გაუქმება"
-                                  >
-                                    <X size={18} />
-                                  </button>
-                                </>
-                              ) : (
-                                <button
-                                  onClick={() => startEdit(restaurant)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                  title="რედაქტირება"
-                                >
-                                  <Edit2 size={18} />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => deleteRestaurant(restaurant.id)}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                title="წაშლა"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    </tr>
+                `;
+                return;
+            }
 
-            {/* Info Footer */}
-            <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">💡 ინფორმაცია</h3>
-              <ul className="space-y-2 text-blue-800 text-sm">
-                <li>✅ მონაცემები ავტომატურად ინახება Supabase ბაზაში</li>
-                <li>🔄 რეალურ დროში სინქრონიზაცია ყველა მოწყობილობაზე</li>
-                <li>📥 CSV იმპორტი/ექსპორტი ბექაპისთვის</li>
-                <li>🔍 ლაივ ძებნა ყველა ველში</li>
-                <li>✏️ სწრაფი რედაქტირება - დააჭირეთ ✏️ ღილაკს</li>
-              </ul>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
+            tbody.innerHTML = filtered.map(restaurant => {
+                const isEditing = editingId === restaurant.id;
+                const showPassword = showPasswords[restaurant.id];
+
+                return `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-4 py-3">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-name-${restaurant.id}" value="${restaurant.name || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                `<span class="font-medium text-slate-800">${restaurant.name || ''}</span>`
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-slate-600">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-address-${restaurant.id}" value="${restaurant.address || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                restaurant.address || '-'
+                            }
+                        </td>
+                        <td class="px-4 py-3">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-version-${restaurant.id}" value="${restaurant.version || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                `<span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">${restaurant.version || '-'}</span>`
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-slate-600 font-mono text-sm">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-anydesk-${restaurant.id}" value="${restaurant.anydesk || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                restaurant.anydesk || '-'
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-slate-600">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-user-${restaurant.id}" value="${restaurant.user || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                restaurant.user || '-'
+                            }
+                        </td>
+                        <td class="px-4 py-3">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-password-${restaurant.id}" value="${restaurant.password || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                `<div class="flex items-center gap-2">
+                                    <span class="font-mono text-sm text-slate-600">${showPassword ? (restaurant.password || '-') : '••••••••'}</span>
+                                    ${restaurant.password ? `<button onclick="togglePassword(${restaurant.id})" class="text-slate-400 hover:text-slate-600">${showPassword ? '🙈' : '👁️'}</button>` : ''}
+                                </div>`
+                            }
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex justify-center gap-2">
+                                ${isEditing ? `
+                                    <button onclick="saveEdit(${restaurant.id})" class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition" title="შენახვა">✅</button>
+                                    <button onclick="cancelEdit()" class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition" title="გაუქმება">❌</button>
+                                ` : `
+                                    <button onclick="startEdit(${restaurant.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="რედაქტირება">✏️</button>
+                                `}
+                                <button onclick="deleteRestaurant(${restaurant.id})" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="წაშლა">🗑️</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function addRestaurant() {
+            const name = document.getElementById('newName').value.trim();
+            
+            if (!name) {
+                alert('გთხოვთ შეიყვანოთ რესტორნის დასახელება');
+                return;
+            }
+
+            try {
+                const newRestaurant = {
+                    name: name,
+                    address: document.getElementById('newAddress').value.trim(),
+                    version: document.getElementById('newVersion').value.trim(),
+                    anydesk: document.getElementById('newAnydesk').value.trim(),
+                    user: document.getElementById('newUser').value.trim(),
+                    password: document.getElementById('newPassword').value.trim()
+                };
+
+                const { data, error } = await supabase
+                    .from('restaurants')
+                    .insert([newRestaurant])
+                    .select();
+
+                if (error) throw error;
+
+                restaurants = [...restaurants, ...data];
+                renderTable();
+
+                // Clear form
+                document.getElementById('newName').value = '';
+                document.getElementById('newAddress').value = '';
+                document.getElementById('newVersion').value = '';
+                document.getElementById('newAnydesk').value = '';
+                document.getElementById('newUser').value = '';
+                document.getElementById('newPassword').value = '';
+
+                alert('✅ წარმატებით დაემატა');
+            } catch (error) {
+                console.error('Error adding restaurant:', error);
+                alert('❌ შეცდომა დამატებისას: ' + error.message);
+            }
+        }
+
+        async function deleteRestaurant(id) {
+            if (!confirm('დარწმუნებული ხართ რომ გსურთ წაშლა?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('restaurants')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                restaurants = restaurants.filter(r => r.id !== id);
+                renderTable();
+                alert('✅ წარმატებით წაიშალა');
+            } catch (error) {
+                console.error('Error deleting restaurant:', error);
+                alert('❌ შეცდომა წაშლისას: ' + error.message);
+            }
+        }
+
+        function startEdit(id) {
+            editingId = id;
+            renderTable(document.getElementById('searchInput').value);
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderTable(document.getElementById('searchInput').value);
+        }
+
+        async function saveEdit(id) {
+            try {
+                const updateData = {
+                    name: document.getElementById(`edit-name-${id}`).value,
+                    address: document.getElementById(`edit-address-${id}`).value,
+                    version: document.getElementById(`edit-version-${id}`).value,
+                    anydesk: document.getElementById(`edit-anydesk-${id}`).value,
+                    user: document.getElementById(`edit-user-${id}`).value,
+                    password: document.getElementById(`edit-password-${id}`).value
+                };
+
+                const { error } = await supabase
+                    .from('restaurants')
+                    .update(updateData)
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                restaurants = restaurants.map(r => 
+                    r.id === id ? { ...r, ...updateData } : r
+                );
+
+                editingId = null;
+                renderTable(document.getElementById('searchInput').value);
+                alert('✅ წარმატებით შეინახა');
+            } catch (error) {
+                console.error('Error saving edit:', error);
+                alert('❌ შეცდომა შენახვისას: ' + error.message);
+            }
+        }
+
+        function togglePassword(id) {
+            showPasswords[id] = !showPasswords[id];
+            renderTable(document.getElementById('searchInput').value);
+        }
+
+        function exportToCSV() {
+            const headers = ['დასახელება', 'მისამართი', 'ვერსია', 'AnyDesk', 'მომხმარებელი', 'პაროლი'];
+            const csvContent = [
+                headers.join(','),
+                ...restaurants.map(r => 
+                    [r.name, r.address, r.version, r.anydesk, r.user, r.password]
+                        .map(field => `"${field || ''}"`)
+                        .join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `restaurants_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        async function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n').slice(1);
+                    const imported = lines
+                        .filter(line => line.trim())
+                        .map((line) => {
+                            const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+                            const cleaned = values.map(v => v.replace(/^"|"$/g, '').trim());
+                            return {
+                                name: cleaned[0] || '',
+                                address: cleaned[1] || '',
+                                version: cleaned[2] || '',
+                                anydesk: cleaned[3] || '',
+                                user: cleaned[4] || '',
+                                password: cleaned[5] || ''
+                            };
+                        })
+                        .filter(item => item.name);
+
+                    if (imported.length === 0) {
+                        alert('❌ CSV ფაილი ცარიელია ან არასწორი ფორმატის');
+                        return;
+                    }
+
+                    const { data, error } = await supabase
+                        .from('restaurants')
+                        .insert(imported)
+                        .select();
+
+                    if (error) throw error;
+
+                    restaurants = [...restaurants, ...data];
+                    renderTable();
+                    alert(`✅ წარმატებით დაიმპორტირდა ${data.length} ჩანაწერი`);
+                } catch (error) {
+                    console.error('Import error:', error);
+                    alert('❌ შეცდომა იმპორტისას: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+    </script>
+</body>
+</html>
