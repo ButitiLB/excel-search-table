@@ -36,11 +36,7 @@
         const SUPABASE_URL = 'https://whhnxvvpngiquenwbgnl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoaG54dnZwbmdpcXVlbndiZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NTkyNzQsImV4cCI6MjA3OTAzNTI3NH0.aAf6h1sTUgPGkdSuoIGO2aHkRifusdTWbHKzrbVdJYc';
 
-        // უსაფრთხო ინიციალიზაცია – აღარასოდეს "Supabase is not defined"
-        const initApp = () => {
-            if (typeof window.Supabase === 'undefined') {
-                setTimeout(initApp, 50);
-                return;
+       
             }
     	        const supabase = createClient(supabaseUrl, supabaseKey)
 
