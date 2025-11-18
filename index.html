@@ -42,7 +42,7 @@
                 setTimeout(initApp, 50);
                 return;
             }
-            const supabase = window.Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    	        const supabase = createClient(supabaseUrl, supabaseKey)
 
             // Icons
             const Search = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>);
