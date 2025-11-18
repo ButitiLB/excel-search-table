@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Style Table with Search</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>მონაცემების ცხრილი</h2>
+
+<input type="text" id="searchInput" placeholder="მოძებნა..." onkeyup="searchTable()">
+
+<table id="dataTable">
+    <thead>
+        <tr>
+            <th>დასახელება</th>
+            <th>მისამართი</th>
+            <th>სხვა ინფორმაცია</th>
+        </tr>
+    </thead>
+    <tbody contenteditable="true">
+        <tr>
+            <td>ობიექტი 1</td>
+            <td>თბილისი, ვაჟა-ფშაველას 10</td>
+            <td>ჩემი ჩანაწერი</td>
+        </tr>
+        <tr>
+            <td>ობიექტი 2</td>
+            <td>ბათუმი, ჭავჭავაძის 34</td>
+            <td>კიდევ რამე</td>
+        </tr>
+    </tbody>
+</table>
+
+<script src="script.js"></script>
+</body>
+</html>
