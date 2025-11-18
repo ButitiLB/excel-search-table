@@ -8,13 +8,15 @@ function searchTable() {
     });
 }
 
-// AUTO-ADD NEW ROW
-function autoAddRow(event) {
+// AUTO ADD ROW
+function autoAddRow() {
     let tbody = document.querySelector("#dataTable tbody");
     let lastRow = tbody.lastElementChild;
 
-    // If user types something in LAST ROW → create new empty row
-    if ([...lastRow.children].some(td => td.innerText.trim() !== "")) {
+    // check if last row is filled
+    let filled = [...lastRow.children].some(td => td.innerText.trim() !== "" && !td.classList.contains("delete-cell"));
+
+    if (filled) {
         let newRow = document.createElement("tr");
         newRow.innerHTML = `
             <td></td><td></td><td></td><td></td>
@@ -27,12 +29,25 @@ function autoAddRow(event) {
 // DELETE ROW
 function deleteRow(cell) {
     let row = cell.parentElement;
+
+    // prevent deleting last always-empty row
+    let tbody = row.parentElement;
+    if (row === tbody.lastElementChild) return;
+
     row.remove();
 }
 
 // DARK MODE
 function toggleDarkMode() {
     document.body.classList.toggle("dark");
+
+    let icon = document.getElementById("darkIcon");
+
+    if (document.body.classList.contains("dark")) {
+        icon.innerHTML = "☀️ Light";
+    } else {
+        icon.innerHTML = "🌙 Dark";
+    }
 }
 
 // CSV IMPORT
@@ -43,7 +58,7 @@ function importCSV(event) {
     reader.onload = function (e) {
         let lines = e.target.result.split("\n");
         let tbody = document.querySelector("#dataTable tbody");
-        tbody.innerHTML = ""; // clear existing rows
+        tbody.innerHTML = "";
 
         lines.forEach(line => {
             let cols = line.split(",");
@@ -60,7 +75,7 @@ function importCSV(event) {
             }
         });
 
-        // Add one empty row for auto-add
+        // add last empty row
         autoAddRow();
     };
 
