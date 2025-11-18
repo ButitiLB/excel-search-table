@@ -14,11 +14,12 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         const SUPABASE_URL = 'https://whhnxvvpngiquenwbgnl.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoaG54dnZwbmdpcXVlbndiZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0NTkyNzQsImV4cCI6MjA3OTAzNTI3NH0.aAf6h1sTUgPGkdSuoIGO2aHkRifusdTWbHKzrbVdJYc';
 
+        // ✓ სწორია! დიდი S-ით
         const { createClient } = Supabase;
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -38,7 +39,7 @@
             const [restaurants, setRestaurants] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [editingId, setEditingId] = useState(null);
-            const [tempValues, setTempValues] = useState({});
+            const [editValues, setEditValues] = useState({});
             const [showPasswords, setShowPasswords] = useState({});
             const [newRestaurant, setNewRestaurant] = useState({ name: '', address: '', version: '', anydesk: '', user: '', password: '' });
 
@@ -55,107 +56,157 @@
                 return () => supabase.removeChannel(channel);
             }, []);
 
-            const filteredRestaurants = restaurants.filter(r =>
+            const filteredRestaurants = restaurants.filter(r => 
                 Object.values(r).some(v => v?.toString().toLowerCase().includes(searchQuery.toLowerCase()))
             );
 
             const startEdit = (id) => {
-                const restaurant = restaurants.find(r => r.id === id);
-                setTempValues(restaurant);
+                const row = restaurants.find(r => r.id === id);
+                setEditValues(row);
                 setEditingId(id);
             };
 
             const saveEdit = async () => {
-                const updates = {};
-                const original = restaurants.find(r => r.id === editingId);
-                for (let key in tempValues) {
-                    if (tempValues[key] !== original[key]) updates[key] = tempValues[key];
-                }
-                if (Object.keys(updates).length > 0) {
-                    await supabase.from('restaurants').update(updates).eq('id', editingId);
-                }
+                const { error } = await supabase.from('restaurants').update(editValues).eq('id', editingId);
+                if (error) alert('შეცდომა: ' + error.message);
                 setEditingId(null);
-                setTempValues({});
+                setEditValues({});
             };
 
             const cancelEdit = () => {
                 setEditingId(null);
-                setTempValues({});
+                setEditValues({});
             };
 
-            const EditableCell = ({ field }) => {
-                const restaurant = restaurants.find(r => r.id === editingId);
-                if (!restaurant) return <span>{restaurant[field] || ''}</span>;
-
-                return (
-                    <input
-                        type="text"
-                        value={tempValues[field] || ''}
-                        onChange={e => setTempValues(prev => ({ ...prev, [field]: e.target.value }))}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter') saveEdit();
-                            if (e.key === 'Escape') cancelEdit();
-                        }}
-                        autoFocus={field === 'name'}
-                        className="w-full px-2 py-1 border rounded border-blue-400"
-                    />
-                );
+            const addRestaurant = async () => {
+                if (!newRestaurant.name.trim()) return alert('დასახელება აუცილებელია');
+                const { error } = await supabase.from('restaurants').insert([newRestaurant]);
+                if (!error) setNewRestaurant({ name: '', address: '', version: '', anydesk: '', user: '', password: '' });
             };
 
-            // დანარჩენი ფუნქციები (add, delete, export, import) იგივეა...
+            const deleteRestaurant = async (id) => {
+                if (confirm('დარწმუნებული ხართ?')) {
+                    await supabase.from('restaurants').delete().eq('id', id);
+                }
+            };
+
+            const exportToCSV = () => {
+                const headers = 'დასახელება,მისამართი,ვერსია,AnyDesk,მომხმარებელი,პაროლი\n';
+                const rows = restaurants.map(r => `"${r.name}","${r.address}","${r.version}","${r.anydesk}","${r.user}","${r.password}"`).join('\n');
+                const blob = new Blob(['\ufeff' + headers + rows], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'restaurants.csv';
+                link.click();
+            };
+
+            const importFromCSV = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const lines = ev.target.result.split('\n').slice(1).filter(l => l.trim());
+                    const data = lines.map(line => {
+                        const clean = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+                        return { name: clean[0] || '', address: clean[1] || '', version: clean[2] || '', anydesk: clean[3] || '', user: clean[4] || '', password: clean[5] || '' };
+                    });
+                    if (data.length > 0) await supabase.from('restaurants').insert(data);
+                };
+                reader.readAsText(file);
+            };
 
             return (
                 <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
                     <div className="max-w-7xl mx-auto">
-                        {/* შენი დიზაინი იგივეა */}
-                        {/* ... ძებნა, დამატება, იმპორტი/ექსპორტი ... */}
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">რესტორნების მონაცემთა ბაზა</h1>
+                            <p className="text-slate-600">Real-time • რედაქტირება მუშაობს!</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <div className="flex gap-4 mb-4 flex-wrap">
+                                <div className="flex-1 min-w-64">
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-3 text-slate-400"><Search /></div>
+                                        <input type="text" placeholder="ძებნა..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                                    </div>
+                                </div>
+                                <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"><Download /> ექსპორტი</button>
+                                <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer"><Upload /> იმპორტი <input type="file" accept=".csv" onChange={importFromCSV} className="hidden" /></label>
+                            </div>
+                            <div className="text-sm text-slate-600">სულ: {restaurants.length} | ნაპოვნი: {filteredRestaurants.length}</div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h2 className="text-xl font-semibold mb-4">ახალი რესტორნის დამატება</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                {['name','address','version','anydesk','user','password'].map(f => (
+                                    <input key={f} type="text" placeholder={f==='name'?'დასახელება':f==='address'?'მისამართი':f==='version'?'ვერსია':f==='anydesk'?'AnyDesk':f==='user'?'მომხმარებელი':'პაროლი'}
+                                        value={newRestaurant[f]} onChange={e => setNewRestaurant({...newRestaurant, [f]: e.target.value})}
+                                        className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                                ))}
+                            </div>
+                            <button onClick={addRestaurant} className="mt-4 flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><Plus /> დამატება</button>
+                        </div>
 
                         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-slate-100">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left">დასახელება</th>
-                                        <th className="px-4 py-3 text-left">მისამართი</th>
-                                        <th className="px-4 py-3 text-left">ვერსია</th>
-                                        <th className="px-4 py-3 text-left">AnyDesk</th>
-                                        <th className="px-4 py-3 text-left">მომხმარებელი</th>
-                                        <th className="px-4 py-3 text-left">პაროლი</th>
-                                        <th className="px-4 py-3 text-center">მოქმედებები</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200">
-                                    {filteredRestaurants.map(r => (
-                                        <tr key={r.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3">{editingId === r.id ? <EditableCell field="name" /> : <span className="font-medium">{r.name}</span>}</td>
-                                            <td className="px-4 py-3">{editingId === r.id ? <EditableCell field="address" /> : r.address}</td>
-                                            <td className="px-4 py-3">{editingId === r.id ? <EditableCell field="version" /> : <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{r.version}</span>}</td>
-                                            <td className="px-4 py-3 font-mono text-sm">{editingId === r.id ? <EditableCell field="anydesk" /> : r.anydesk}</td>
-                                            <td className="px-4 py-3">{editingId === r.id ? <EditableCell field="user" /> : r.user}</td>
-                                            <td className="px-4 py-3">
-                                                {editingId === r.id ? <EditableCell field="password" /> :
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-mono text-sm">{showPasswords[r.id] ? r.password : '••••••••'}</span>
-                                                        <button onClick={() => setShowPasswords(p => ({ ...p, [r.id]: !p[r.id] }))}>{showPasswords[r.id] ? <EyeOff /> : <Eye />}</button>
-                                                    </div>
-                                                }
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex justify-center gap-2">
-                                                    {editingId === r.id ? (
-                                                        <>
-                                                            <button onClick={saveEdit} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><Check /></button>
-                                                            <button onClick={cancelEdit} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><X /></button>
-                                                        </>
-                                                    ) : (
-                                                        <button onClick={() => startEdit(r.id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 /></button>
-                                                    )}
-                                                    <button onClick={() => confirm('წავშალოთ?') && supabase.from('restaurants').delete().eq('id', r.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 /></button>
-                                                </div>
-                                            </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-100">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">დასახელება</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მისამართი</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">ვერსია</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">AnyDesk</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">მომხმარებელი</th>
+                                            <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">პაროლი</th>
+                                            <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700">მოქმედებები</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {filteredRestaurants.map(r => (
+                                            <tr key={r.id} className="hover:bg-slate-50">
+                                                <td className="px-4 py-3">
+                                                    {editingId === r.id ? <input type="text" value={editValues.name || ''} onChange={e => setEditValues({...editValues, name: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} autoFocus className="w-full px-2 py-1 border rounded" /> : <span className="font-medium text-slate-800">{r.name}</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {editingId === r.id ? <input type="text" value={editValues.address || ''} onChange={e => setEditValues({...editValues, address: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} className="w-full px-2 py-1 border rounded" /> : r.address}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {editingId === r.id ? <input type="text" value={editValues.version || ''} onChange={e => setEditValues({...editValues, version: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} className="w-full px-2 py-1 border rounded" /> : <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{r.version}</span>}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600 font-mono text-sm">
+                                                    {editingId === r.id ? <input type="text" value={editValues.anydesk || ''} onChange={e => setEditValues({...editValues, anydesk: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} className="w-full px-2 py-1 border rounded" /> : r.anydesk}
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {editingId === r.id ? <input type="text" value={editValues.user || ''} onChange={e => setEditValues({...editValues, user: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} className="w-full px-2 py-1 border rounded" /> : r.user}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {editingId === r.id ? <input type="text" value={editValues.password || ''} onChange={e => setEditValues({...editValues, password: e.target.value})} onKeyDown={e => e.key === 'Enter' && saveEdit()} className="w-full px-2 py-1 border rounded" /> :
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-mono text-sm text-slate-600">{showPasswords[r.id] ? r.password : '••••••••'}</span>
+                                                            <button onClick={() => setShowPasswords(p => ({ ...p, [r.id]: !p[r.id] }))}>{showPasswords[r.id] ? <EyeOff /> : <Eye />}</button>
+                                                        </div>
+                                                    }
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex justify-center gap-2">
+                                                        {editingId === r.id ? (
+                                                            <>
+                                                                <button onClick={saveEdit} className="p-2 text-green-600 hover:bg-green-50 rounded-lg"><Check /></button>
+                                                                <button onClick={cancelEdit} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><X /></button>
+                                                            </>
+                                                        ) : (
+                                                            <button onClick={() => startEdit(r.id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 /></button>
+                                                        )}
+                                                        <button onClick={() => deleteRestaurant(r.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
