@@ -3,7 +3,7 @@ function searchTable() {
     let rows = document.querySelectorAll("#dataTable tbody tr");
 
     rows.forEach(row => {
-        let rowText = row.innerText.toLowerCase();
-        row.style.display = rowText.includes(input) ? "" : "none";
+        let text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? "" : "none";
     });
 }
