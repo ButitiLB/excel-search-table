@@ -16,7 +16,7 @@ body.dark {
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    max-width: 1100px;
+    max-width: 1200px;
     margin: auto;
     transition: 0.3s;
 }
@@ -37,18 +37,17 @@ body.dark .container {
     gap: 10px;
 }
 
-#darkBtn, #importLabel {
+/* IMPORT BUTTON */
+#importLabel {
     padding: 10px 20px;
     background: #3f8cff;
     color: white;
     border-radius: 10px;
     cursor: pointer;
-    border: none;
-    transition: 0.2s;
     font-size: 15px;
 }
 
-#darkBtn:hover, #importLabel:hover {
+#importLabel:hover {
     background: #1f6fe0;
 }
 
@@ -56,10 +55,25 @@ body.dark .container {
     display: none;
 }
 
+/* DARK MODE BUTTON */
+#darkBtn {
+    padding: 10px 20px;
+    background: #3f8cff;
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+    border: none;
+    font-size: 15px;
+}
+
+#darkBtn:hover {
+    background: #1f6fe0;
+}
+
 #searchInput {
     width: 100%;
     padding: 12px;
-    margin-top: 15px;
+    margin-top: 20px;
     margin-bottom: 15px;
     font-size: 16px;
     border-radius: 10px;
@@ -75,8 +89,8 @@ body.dark #searchInput {
 table {
     width: 100%;
     border-collapse: collapse;
-    border-radius: 10px;
     overflow: hidden;
+    table-layout: fixed; /* FIXED COLUMN WIDTHS */
 }
 
 thead {
@@ -91,11 +105,19 @@ body.dark thead {
 th, td {
     padding: 14px;
     border-bottom: 1px solid #e0e0e0;
+    word-wrap: break-word;
 }
 
 body.dark td {
     border-color: #555;
 }
+
+/* FIXED COLUMN WIDTHS */
+.col-name { width: 22%; }
+.col-addr { width: 38%; }
+.col-ver  { width: 15%; }
+.col-any  { width: 15%; }
+.col-del  { width: 10%; }
 
 tbody tr:hover {
     background: #f1f7ff;
@@ -109,5 +131,9 @@ body.dark tbody tr:hover {
     text-align: center;
     cursor: pointer;
     color: red;
-    font-size: 18px;
+    font-size: 22px;
+}
+
+.delete-cell:hover {
+    opacity: 0.7;
 }
