@@ -7,3 +7,17 @@ function searchTable() {
         row.style.display = text.includes(input) ? "" : "none";
     });
 }
+
+function addRow() {
+    let tableBody = document.querySelector("#dataTable tbody");
+    let newRow = document.createElement("tr");
+
+    newRow.innerHTML = `
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    `;
+
+    tableBody.appendChild(newRow);
+}
