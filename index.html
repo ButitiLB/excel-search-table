@@ -15,7 +15,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Lucide Icons
+        // Lucide Icons as React components
         const Search = () => (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
@@ -75,34 +75,11 @@
             </svg>
         );
 
-        const RefreshCw = () => (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-        );
-
-        const Github = () => (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
-            </svg>
-        );
-
         function RestaurantDatabase() {
             const [restaurants, setRestaurants] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [editingId, setEditingId] = useState(null);
             const [showPasswords, setShowPasswords] = useState({});
-            const [githubConfig, setGithubConfig] = useState({
-                owner: '',
-                repo: '',
-                token: '',
-                branch: 'main',
-                file: 'restaurants.json'
-            });
-            const [isConfigured, setIsConfigured] = useState(false);
-            const [loading, setLoading] = useState(false);
-            const [lastSync, setLastSync] = useState(null);
             const [newRestaurant, setNewRestaurant] = useState({
                 name: '',
                 address: '',
@@ -113,133 +90,32 @@
             });
 
             useEffect(() => {
-                loadConfig();
+                loadData();
             }, []);
 
-            useEffect(() => {
-                if (isConfigured) {
-                    loadFromGithub();
-                    // Auto-refresh every 30 seconds
-                    const interval = setInterval(loadFromGithub, 30000);
-                    return () => clearInterval(interval);
-                }
-            }, [isConfigured]);
-
-            const loadConfig = () => {
+            const loadData = () => {
                 try {
-                    const saved = localStorage.getItem('github-config');
+                    const saved = localStorage.getItem('restaurants-data');
                     if (saved) {
-                        const config = JSON.parse(saved);
-                        setGithubConfig(config);
-                        setIsConfigured(true);
+                        setRestaurants(JSON.parse(saved));
                     }
                 } catch (error) {
-                    console.log('No config found');
+                    console.log('No existing data found');
                 }
             };
 
-            const saveConfig = () => {
-                if (!githubConfig.owner || !githubConfig.repo || !githubConfig.token) {
-                    alert('გთხოვთ შეავსოთ ყველა ველი!');
-                    return;
-                }
-                localStorage.setItem('github-config', JSON.stringify(githubConfig));
-                setIsConfigured(true);
-                loadFromGithub();
-            };
-
-            const loadFromGithub = async () => {
-                setLoading(true);
+            const saveData = (data) => {
                 try {
-                    const url = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.file}?ref=${githubConfig.branch}`;
-                    const response = await fetch(url, {
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        const content = JSON.parse(atob(data.content));
-                        setRestaurants(content);
-                        setLastSync(new Date());
-                    } else if (response.status === 404) {
-                        // File doesn't exist yet, create it
-                        await saveToGithub([]);
-                        setRestaurants([]);
-                    }
+                    localStorage.setItem('restaurants-data', JSON.stringify(data));
                 } catch (error) {
-                    console.error('Error loading from GitHub:', error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            const saveToGithub = async (data) => {
-                setLoading(true);
-                try {
-                    // First, get the current file SHA if it exists
-                    const getUrl = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.file}?ref=${githubConfig.branch}`;
-                    let sha = null;
-                    
-                    try {
-                        const getResponse = await fetch(getUrl, {
-                            headers: {
-                                'Authorization': `token ${githubConfig.token}`,
-                                'Accept': 'application/vnd.github.v3+json'
-                            }
-                        });
-                        if (getResponse.ok) {
-                            const fileData = await getResponse.json();
-                            sha = fileData.sha;
-                        }
-                    } catch (e) {
-                        // File doesn't exist, that's ok
-                    }
-
-                    // Now create or update the file
-                    const url = `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.file}`;
-                    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-                    
-                    const body = {
-                        message: `Update restaurants data - ${new Date().toISOString()}`,
-                        content: content,
-                        branch: githubConfig.branch
-                    };
-                    
-                    if (sha) {
-                        body.sha = sha;
-                    }
-
-                    const response = await fetch(url, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
-                    });
-
-                    if (response.ok) {
-                        setLastSync(new Date());
-                        alert('მონაცემები წარმატებით აიტვირთა GitHub-ზე!');
-                    } else {
-                        const error = await response.json();
-                        alert('შეცდომა GitHub-ზე ატვირთვისას: ' + error.message);
-                    }
-                } catch (error) {
-                    console.error('Error saving to GitHub:', error);
-                    alert('შეცდომა GitHub-თან კავშირისას');
-                } finally {
-                    setLoading(false);
+                    console.error('Error saving data:', error);
+                    alert('შეცდომა მონაცემების შენახვისას');
                 }
             };
 
             const filteredRestaurants = restaurants.filter(restaurant =>
                 Object.values(restaurant).some(value =>
-                    value && value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+                    value.toString().toLowerCase().includes(searchQuery.toLowerCase())
                 )
             );
 
@@ -251,7 +127,7 @@
 
                 const updated = [...restaurants, { ...newRestaurant, id: Date.now() }];
                 setRestaurants(updated);
-                saveToGithub(updated);
+                saveData(updated);
                 setNewRestaurant({
                     name: '',
                     address: '',
@@ -266,7 +142,7 @@
                 if (confirm('დარწმუნებული ხართ რომ გსურთ წაშლა?')) {
                     const updated = restaurants.filter(r => r.id !== id);
                     setRestaurants(updated);
-                    saveToGithub(updated);
+                    saveData(updated);
                 }
             };
 
@@ -279,7 +155,7 @@
                     r.id === id ? { ...r, [field]: value } : r
                 );
                 setRestaurants(updated);
-                saveToGithub(updated);
+                saveData(updated);
             };
 
             const togglePasswordVisibility = (id) => {
@@ -292,7 +168,7 @@
                     headers.join(','),
                     ...restaurants.map(r => 
                         [r.name, r.address, r.version, r.anydesk, r.user, r.password]
-                            .map(field => `"${field || ''}"`)
+                            .map(field => `"${field}"`)
                             .join(',')
                     )
                 ].join('\n');
@@ -304,103 +180,46 @@
                 link.click();
             };
 
-            if (!isConfigured) {
-                return (
-                    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8 flex items-center justify-center">
-                        <div className="bg-white rounded-xl shadow-lg p-8 max-w-2xl w-full">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Github />
-                                <h1 className="text-2xl font-bold text-slate-800">GitHub კონფიგურაცია</h1>
-                            </div>
-                            
-                            <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        GitHub Username/Organization
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="example: myusername"
-                                        value={githubConfig.owner}
-                                        onChange={(e) => setGithubConfig({...githubConfig, owner: e.target.value})}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
+            const importFromCSV = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
 
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Repository Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="example: restaurant-data"
-                                        value={githubConfig.repo}
-                                        onChange={(e) => setGithubConfig({...githubConfig, repo: e.target.value})}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n').slice(1);
+                    const imported = lines
+                        .filter(line => line.trim())
+                        .map((line, index) => {
+                            const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
+                            const cleaned = values.map(v => v.replace(/^"|"$/g, '').trim());
+                            return {
+                                id: Date.now() + index,
+                                name: cleaned[0] || '',
+                                address: cleaned[1] || '',
+                                version: cleaned[2] || '',
+                                anydesk: cleaned[3] || '',
+                                user: cleaned[4] || '',
+                                password: cleaned[5] || ''
+                            };
+                        });
 
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Personal Access Token
-                                    </label>
-                                    <input
-                                        type="password"
-                                        placeholder="ghp_xxxxxxxxxxxx"
-                                        value={githubConfig.token}
-                                        onChange={(e) => setGithubConfig({...githubConfig, token: e.target.value})}
-                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={saveConfig}
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-medium"
-                            >
-                                შენახვა და გაგრძელება
-                            </button>
-
-                            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <h3 className="font-semibold text-yellow-900 mb-2">ინსტრუქცია:</h3>
-                                <ol className="list-decimal list-inside space-y-1 text-sm text-yellow-800">
-                                    <li>შექმენით ახალი რეპოზიტორია GitHub-ზე</li>
-                                    <li>გადადით Settings → Developer settings → Personal access tokens → Tokens (classic)</li>
-                                    <li>Generate new token (classic)</li>
-                                    <li>მონიშნეთ: repo (full control)</li>
-                                    <li>დააკოპირეთ token და ჩასვით ზემოთ</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+                    const updated = [...restaurants, ...imported];
+                    setRestaurants(updated);
+                    saveData(updated);
+                    alert(`წარმატებით დაიმპორტირდა ${imported.length} ჩანაწერი`);
+                };
+                reader.readAsText(file);
+            };
 
             return (
                 <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
                     <div className="max-w-7xl mx-auto">
                         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-slate-800 mb-2">
-                                        რესტორნების მონაცემთა ბაზა
-                                    </h1>
-                                    <p className="text-slate-600">ლაივ სინქრონიზაცია GitHub-თან</p>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-sm text-slate-600 mb-2">
-                                        {lastSync && `ბოლო სინქრონიზაცია: ${lastSync.toLocaleTimeString('ka-GE')}`}
-                                    </div>
-                                    <button
-                                        onClick={loadFromGithub}
-                                        disabled={loading}
-                                        className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
-                                    >
-                                        <RefreshCw />
-                                        {loading ? 'იტვირთება...' : 'განახლება'}
-                                    </button>
-                                </div>
-                            </div>
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">
+                                რესტორნების მონაცემთა ბაზა
+                            </h1>
+                            <p className="text-slate-600">ლაივ ძებნა და მართვა</p>
                         </div>
 
                         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -426,6 +245,16 @@
                                     <Download />
                                     ექსპორტი CSV
                                 </button>
+                                <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                                    <Upload />
+                                    იმპორტი CSV
+                                    <input
+                                        type="file"
+                                        accept=".csv"
+                                        onChange={importFromCSV}
+                                        className="hidden"
+                                    />
+                                </label>
                             </div>
                             <div className="text-sm text-slate-600">
                                 სულ: {restaurants.length} | ნაპოვნი: {filteredRestaurants.length}
@@ -480,8 +309,7 @@
                             </div>
                             <button
                                 onClick={addRestaurant}
-                                disabled={loading}
-                                className="mt-4 flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                                className="mt-4 flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                             >
                                 <Plus />
                                 დამატება
@@ -557,4 +385,102 @@
                                                                 type="text"
                                                                 defaultValue={restaurant.anydesk}
                                                                 onBlur={(e) => saveEdit(restaurant.id, 'anydesk', e.target.value)}
-                                                                className="w-full px-
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            restaurant.anydesk
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600">
+                                                        {editingId === restaurant.id ? (
+                                                            <input
+                                                                type="text"
+                                                                defaultValue={restaurant.user}
+                                                                onBlur={(e) => saveEdit(restaurant.id, 'user', e.target.value)}
+                                                                className="w-full px-2 py-1 border rounded"
+                                                            />
+                                                        ) : (
+                                                            restaurant.user
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-2">
+                                                            {editingId === restaurant.id ? (
+                                                                <input
+                                                                    type="text"
+                                                                    defaultValue={restaurant.password}
+                                                                    onBlur={(e) => saveEdit(restaurant.id, 'password', e.target.value)}
+                                                                    className="w-full px-2 py-1 border rounded"
+                                                                />
+                                                            ) : (
+                                                                <>
+                                                                    <span className="font-mono text-sm text-slate-600">
+                                                                        {showPasswords[restaurant.id] ? restaurant.password : '••••••••'}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => togglePasswordVisibility(restaurant.id)}
+                                                                        className="text-slate-400 hover:text-slate-600"
+                                                                    >
+                                                                        {showPasswords[restaurant.id] ? <EyeOff /> : <Eye />}
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex justify-center gap-2">
+                                                            {editingId === restaurant.id ? (
+                                                                <button
+                                                                    onClick={() => setEditingId(null)}
+                                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                                                    title="შენახვა"
+                                                                >
+                                                                    <Save />
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => startEdit(restaurant)}
+                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                                                    title="რედაქტირება"
+                                                                >
+                                                                    <Edit2 />
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => deleteRestaurant(restaurant.id)}
+                                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                                                                title="წაშლა"
+                                                            >
+                                                                <Trash2 />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                            <h3 className="text-lg font-semibold text-blue-900 mb-2">GitHub-თან სინქრონიზაცია</h3>
+                            <p className="text-blue-800 mb-3">
+                                მონაცემები ავტომატურად ინახება ბრაუზერში. GitHub-ზე ატვირთვისთვის:
+                            </p>
+                            <ol className="list-decimal list-inside space-y-2 text-blue-800">
+                                <li>დააჭირეთ "ექსპორტი CSV" ღილაკს</li>
+                                <li>ატვირთეთ ფაილი თქვენს GitHub რეპოზიტორიაში</li>
+                                <li>გააზიარეთ რეპოზიტორიის ბმული თქვენს გუნდთან</li>
+                                <li>გუნდის წევრებს შეუძლიათ "იმპორტი CSV" ბმულით მონაცემების დატვირთვა</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<RestaurantDatabase />, document.getElementById('root'));
+    </script>
+</body>
+</html>
