@@ -13,12 +13,17 @@
         <h2>ობიექტების მონაცემთა ბაზა</h2>
 
         <div class="buttons">
+
             <label id="importLabel">
                 CSV Import
                 <input type="file" id="csvInput" accept=".csv" onchange="importCSV(event)">
             </label>
 
-            <button id="darkBtn" onclick="toggleDarkMode()">Dark Mode</button>
+            <!-- DARK MODE ICON BUTTON -->
+            <button id="darkBtn" onclick="toggleDarkMode()">
+                <span id="darkIcon">🌙 Dark</span>
+            </button>
+
         </div>
     </div>
 
@@ -27,11 +32,11 @@
     <table id="dataTable">
         <thead>
             <tr>
-                <th>დასახელება</th>
-                <th>მისამართი</th>
-                <th>ვერსია</th>
-                <th>Anydesk</th>
-                <th>წაშლა</th>
+                <th class="col-name">დასახელება</th>
+                <th class="col-addr">მისამართი</th>
+                <th class="col-ver">ვერსია</th>
+                <th class="col-any">Anydesk</th>
+                <th class="col-del">წაშლა</th>
             </tr>
         </thead>
 
@@ -52,7 +57,7 @@
                 <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
             </tr>
 
-            <!-- ALWAYS keep last row empty (auto new row) -->
+            <!-- ALWAYS KEEP ONE EMPTY LAST ROW -->
             <tr>
                 <td></td><td></td><td></td><td></td>
                 <td class="delete-cell" contenteditable="false" onclick="deleteRow(this)">🗑️</td>
