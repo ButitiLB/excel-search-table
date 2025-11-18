@@ -36,6 +36,22 @@ h2 {
     box-shadow: 0 0 5px #3f8cff;
 }
 
+#addRowBtn {
+    margin-bottom: 15px;
+    padding: 10px 20px;
+    background: #3f8cff;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#addRowBtn:hover {
+    background: #1f6fe0;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
