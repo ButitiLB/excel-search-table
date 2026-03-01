@@ -71,7 +71,8 @@
                         <input type="text" id="newName" placeholder="დასახელება *" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="newAddress" placeholder="მისამართი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="newVersion" placeholder="ვერსია" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <input type="text" id="UID" placeholder="UID" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newUID" placeholder="UID" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="newAnydesk" placeholder="AnyDesk" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="newUser" placeholder="მომხმარებელი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         <input type="text" id="newPassword" placeholder="პაროლი" class="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
@@ -89,6 +90,7 @@
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">დასახელება</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">მისამართი</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">ვერსია</th>
+                                    <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">UID</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">AnyDesk</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">მომხმარებელი</th>
                                     <th class="px-4 py-3 text-left text-sm font-semibold text-slate-700">პაროლი</th>
@@ -179,7 +181,7 @@
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="px-4 py-12 text-center text-slate-500">
+                        <td colspan="8" class="px-4 py-12 text-center text-slate-500">
                             ${searchQuery ? '🔍 მონაცემები არ მოიძებნა' : '📝 დაამატეთ პირველი რესტორანი'}
                         </td>
                     </tr>
@@ -209,6 +211,12 @@
                             ${isEditing ? 
                                 `<input type="text" id="edit-version-${restaurant.id}" value="${restaurant.version || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
                                 `<span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">${restaurant.version || '-'}</span>`
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-slate-600 font-mono text-sm">
+                            ${isEditing ? 
+                                `<input type="text" id="edit-uid-${restaurant.id}" value="${restaurant.uid || ''}" class="w-full px-2 py-1 border border-blue-300 rounded">` :
+                                restaurant.uid || '-'
                             }
                         </td>
                         <td class="px-4 py-3 text-slate-600 font-mono text-sm">
@@ -261,6 +269,7 @@
                     name: name,
                     address: document.getElementById('newAddress').value.trim(),
                     version: document.getElementById('newVersion').value.trim(),
+                    uid: document.getElementById('newUID').value.trim(),
                     anydesk: document.getElementById('newAnydesk').value.trim(),
                     user: document.getElementById('newUser').value.trim(),
                     password: document.getElementById('newPassword').value.trim()
@@ -280,6 +289,7 @@
                 document.getElementById('newName').value = '';
                 document.getElementById('newAddress').value = '';
                 document.getElementById('newVersion').value = '';
+                document.getElementById('newUID').value = '';
                 document.getElementById('newAnydesk').value = '';
                 document.getElementById('newUser').value = '';
                 document.getElementById('newPassword').value = '';
@@ -327,6 +337,7 @@
                     name: document.getElementById(`edit-name-${id}`).value,
                     address: document.getElementById(`edit-address-${id}`).value,
                     version: document.getElementById(`edit-version-${id}`).value,
+                    uid: document.getElementById(`edit-uid-${id}`).value,
                     anydesk: document.getElementById(`edit-anydesk-${id}`).value,
                     user: document.getElementById(`edit-user-${id}`).value,
                     password: document.getElementById(`edit-password-${id}`).value
@@ -358,12 +369,12 @@
         }
 
         function exportToCSV() {
-            const headers = ['დასახელება', 'მისამართი', 'ვერსია', 'AnyDesk', 'მომხმარებელი', 'პაროლი'];
+            const headers = ['დასახელება', 'მისამართი', 'ვერსია', 'UID', 'AnyDesk', 'მომხმარებელი', 'პაროლი'];
             const csvContent = [
                 headers.join(','),
                 ...restaurants.map(r => 
-                    [r.name, r.address, r.version, r.anydesk, r.user, r.password]
-                        .map(field => `"${field || ''}"`)
+                    [r.name, r.address, r.version, r.uid, r.anydesk, r.user, r.password]
+                        .map(field => `"${(field || '').toString().replace(/"/g, '""')}"`)
                         .join(',')
                 )
             ].join('\n');
@@ -383,22 +394,23 @@
             reader.onload = async (e) => {
                 try {
                     const text = e.target.result;
-                    const lines = text.split('\n').slice(1);
+                    const lines = text.split('\n').slice(1); // skip header
                     const imported = lines
                         .filter(line => line.trim())
                         .map((line) => {
-                            const values = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g) || [];
-                            const cleaned = values.map(v => v.replace(/^"|"$/g, '').trim());
+                            const values = line.match(/(".*?"|[^,]*)(?=\s*,|\s*$)/g) || [];
+                            const cleaned = values.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
                             return {
                                 name: cleaned[0] || '',
                                 address: cleaned[1] || '',
                                 version: cleaned[2] || '',
-                                anydesk: cleaned[3] || '',
-                                user: cleaned[4] || '',
-                                password: cleaned[5] || ''
+                                uid: cleaned[3] || '',
+                                anydesk: cleaned[4] || '',
+                                user: cleaned[5] || '',
+                                password: cleaned[6] || ''
                             };
                         })
-                        .filter(item => item.name);
+                        .filter(item => item.name.trim() !== '');
 
                     if (imported.length === 0) {
                         alert('❌ CSV ფაილი ცარიელია ან არასწორი ფორმატის');
